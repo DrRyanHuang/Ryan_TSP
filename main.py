@@ -17,7 +17,7 @@ from models import PSO_TSP
 
 SA_run = SA_TSP(data_name='gr202.tsp', max_iter=10000, T_max=3000000, T_min=1e-20)
 GA_run = GA_TSP(data_name='gr202.tsp', max_iter=50)
-PSO_run = PSO_TSP(data_name='gr202.tsp', max_iter=5000)
+PSO_run = PSO_TSP(data_name='gr202.tsp', max_iter=50)
 
 
 def run_model(some_run, times=1):

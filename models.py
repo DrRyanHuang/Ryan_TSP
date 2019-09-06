@@ -41,10 +41,10 @@ class some_TSP:
         # 之前是否已经预处理过该文件
         if os.path.exists('./npy_data/' + self.data_dir + '_re_dis_array.npy'):
             self.relation_distance_array = np.load('./npy_data/' + self.data_dir + '_re_dis_array.npy')
-            self.city_quantity = self.relation_distance_array.shape[0]
+            self.city_n = self.relation_distance_array.shape[0]
         else:
             self.data_process()                  # 数据预处理, 给 self.relation_distance_array、self.lun_lat_array 赋值
-        print('初始化完成')
+        print('基类初始化完成')
         
     def __str__(self):
 
@@ -102,8 +102,8 @@ class some_TSP:
         由于 TSPLIB 的data文件前几行有信息字符串而最后一行有 EOF
         此函数
          - 读入原文本文件 将信息及EOF删除
-         - 获得 shape=(self.city_quantity, 2)的城市经纬度矩阵
-         - (注: 城市编号从上到下依次是(0, self.city_quantity-1))
+         - 获得 shape=(self.city_n, 2)的城市经纬度矩阵
+         - (注: 城市编号从上到下依次是(0, self.city_n-1))
          - 获得城市之间的距离关系矩阵
          - 保存距离关系矩阵(self.data_dir+'re_dis_array.npy')
          - 将 lun_lat_array 赋值给类属性
@@ -114,11 +114,11 @@ class some_TSP:
         '''
         with open('./TSP_data/'+self.data_dir, 'r') as f:
             file_list = f.readlines()[7:-1]
-        self.city_quantity = len(file_list)                                                       # 给城市数量赋值
+        self.city_n = len(file_list)                                                       # 给城市数量赋值
         lun_lat_array = np.array([city_str.split()[1:] for city_str in file_list])                # 得到城市经纬度矩阵(字符串版本)
         lun_lat_array = lun_lat_array.astype(dtype=float)                                         # 转换为 float 版本
         self.lun_lat_array = lun_lat_array                                                        # 将该 array 改为类属性, 可视化时要用
-        self.relation_distance_array = np.zeros(shape=(self.city_quantity, self.city_quantity))   # 初始化距离关系矩阵
+        self.relation_distance_array = np.zeros(shape=(self.city_n, self.city_n))   # 初始化距离关系矩阵
         for i_index, i in enumerate(lun_lat_array):
             for j_index, j in enumerate(lun_lat_array):
                 self.relation_distance_array[i_index][j_index] = self.__calc_distance_from_latlun(i, j)                      # 给关系矩阵赋值
@@ -128,15 +128,15 @@ class some_TSP:
     def generate_individual(self):
         '''
         生产智能体个体
-        n(self.city_quantity)座城市用0、1、...、n-1来表示
-        返回的形状是: (self.city_quantity, )
+        n(self.city_n)座城市用0、1、...、n-1来表示
+        返回的形状是: (self.city_n, )
         '''
-        return np.random.permutation(self.city_quantity) # 产生0到(n-1)n个数字的随机组合序列
+        return np.random.permutation(self.city_n) # 产生0到(n-1)n个数字的随机组合序列
     
     def generate_group(self):
         '''
         生产智能体种群
-        返回的形状是: (self.individual_quality_of_special, self.city_quantity)
+        返回的形状是: (self.individual_quality_of_special, self.city_n)
         '''
         group_list = [self.generate_individual().reshape(1, -1) for i in range(self.individual_quality_of_special)]
         return np.concatenate(group_list)     # 将 (individual_quality_of_special) 个个体搞在一个种群中
@@ -189,7 +189,7 @@ class some_TSP:
         返回两条子代染色体
         使用 部分匹配交叉 (PMX) 策略
         '''
-        crossover_start = np.random.randint(0, self.city_quantity)            # 交叉的起始位置 返回 0、...、self.city_quantity 的随机数 交叉包括此处
+        crossover_start = np.random.randint(0, self.city_n)            # 交叉的起始位置 返回 0、...、self.city_n 的随机数 交叉包括此处
         crossover_length = np.random.randint(1, 34 - crossover_start + 1)    # 定义交叉的长度 由于交叉包括起点 则 +1
     
         # 给B用
@@ -274,7 +274,7 @@ class some_TSP:
         使用 郭涛交叉(GuoTao Crossover,GTX) 策略
         '''
         # 从 individual_A 中随机选择一个个体(此处有简化)
-        a = np.random.randint(self.city_quantity)
+        a = np.random.randint(self.city_n)
         # 在 individual_B 中找到的此个体的位置
         a_index_in_B = np.where(individual_B == a)[0][0]
         # 在 individual_B 的 b
@@ -306,7 +306,7 @@ class some_TSP:
         
         使用 循环交叉(Cycle Crossover,CX) 策略
         '''
-        choose_bool = [False] * self.city_quantity
+        choose_bool = [False] * self.city_n
         choose_bool = np.array(choose_bool)
         child_A = individual_A.copy()
         child_B = individual_B.copy()
@@ -333,7 +333,7 @@ class some_TSP:
         '''
         individual_copy = individual.copy()
         for i in range(n):
-            a, b = np.random.randint(0, self.city_quantity-1, size=(2,))
+            a, b = np.random.randint(0, self.city_n-1, size=(2,))
 #            temp = individual_copy[a]
 #            individual_copy[a] = individual_copy[b]
 #            individual_copy[b] = temp
@@ -346,7 +346,7 @@ class some_TSP:
         传入未变异的个体
         返回变异后的个体
         '''
-        start, stop = np.random.randint(low=0, high=self.city_quantity+1, size=(2,))   # +1 是想把此字符串全部包括
+        start, stop = np.random.randint(low=0, high=self.city_n+1, size=(2,))   # +1 是想把此字符串全部包括
         individual_copy = individual.copy()
         
         # 以下注释之因: 技术太渣不敢说话
@@ -403,7 +403,7 @@ class some_TSP:
     def choose_best(self, *arg):
         '''
         此是最佳个体保留？
-        传入的参数必须是 (x, self.city_quantity)
+        传入的参数必须是 (x, self.city_n)
         最佳个体保留选择, 无需传入适应度, 此处重新计算
         
         返回 子代
@@ -412,7 +412,7 @@ class some_TSP:
         # 先进行个体有效性检查
         for i in range(len(arg)):
             assert len(arg[i].shape) == 2, "传入的种群维度不对, 请reshape"
-            assert arg[i].shape[1] == self.city_quantity, "传入的种群城市数不对, 请确认"
+            assert arg[i].shape[1] == self.city_n, "传入的种群城市数不对, 请确认"
         
         merge_special = np.concatenate(arg)                                     # 将所有种群合并
         merge_special_fitness = self.calc_group_fitness(merge_special)          # 计算合并种群的 fitness
@@ -443,7 +443,7 @@ class some_TSP:
         indiv_A = individual_A.copy()
         indiv_B = individual_B.copy() # 先copy
         diff_list = [] # 交换子列表 —— 论文中的 steps
-        for indiv_B_i in range(self.city_quantity-1): # 一包茶一根烟，一个BUG写一天......
+        for indiv_B_i in range(self.city_n-1): # 一包茶一根烟，一个BUG写一天......
             '''
             取 indiv_B[indiv_B_i] 在 indiv_A上滑动
             直到 indiv_A[local_A] == indiv_B[indiv_B_i]
@@ -536,8 +536,67 @@ class some_TSP:
     
     def visualization_latlun(self):
         # 可视化函数
-        pass
-
+        self.data_process() # 加载要用的数据
+        '''
+        该Python文件的作用是可视化TSP问题的解
+        
+        中途遇到点小问题, 已将问题发在我的博客上:
+            https://segmentfault.com/a/1190000019476955
+        
+        同时,代码报了几个warning,在Matplotlib3.3之后将不能在用,所以请注意版本问题
+        '''
+        
+        import os
+        import conda
+        import numpy as np
+        
+        conda_file_dir = conda.__file__
+        conda_dir = conda_file_dir.split('lib')[0]
+        proj_lib = os.path.join(os.path.join(conda_dir, 'share'), 'proj')
+        os.environ["PROJ_LIB"] = proj_lib
+        # 以上4句代码用于添加环境变量
+        # windows 的话应该不用这么麻烦
+        # 我的环境是Ubuntu18.04 从他github上翻出来的
+        # 应该是要大改环境变量 我不想纠结了
+        
+        
+        from mpl_toolkits.basemap import Basemap
+        import matplotlib.pyplot as plt
+        
+        best_order = np.load(self.save_best_dir, allow_pickle=True)[1]
+        data_array = self.lun_lat_array[best_order]     # 按照给定的顺序重排
+        data_array = data_array[:, ::-1]                # 其经纬度反了
+        # 建立一个basemap对象
+        m = Basemap(projection='mill',
+                    llcrnrlat = 30,     # 左下角的纬度
+                    llcrnrlon = -70,    # 左下角的经度
+                    urcrnrlat = 80,     # 右上角的维度
+                    urcrnrlon = 35,     # 右上角的经度
+                    resolution='l'      # 分辨率低, 为了加快生成速度
+                    )
+        # 以下是换算经纬度 得到 lun_lat_array(注意和 self.lun_lat_array 区分)
+        lun_lat_list = []
+        for lun_lat in data_array:
+            lun_lat_list.append(
+                    m(*lun_lat)
+                    )
+        lun_lat_array = np.array(lun_lat_list)
+        
+        m.drawcoastlines()                            # 画国家分割线
+        m.drawcountries(linewidth=1)                  # 设置国家分割线　线宽为２
+                  
+        
+        m.plot(lun_lat_array[:, 0], lun_lat_array[:, 1], 'b*', markersize=5)   # 画点
+        # 此处标记看参考 https://matplotlib.org/api/markers_api.html
+        
+        m.plot(lun_lat_array[:, 0], lun_lat_array[:, 1], color='r', linewidth=1, label='TSP_SA')
+        
+        fig = plt.gcf()                    # 得到当前的figure     
+        # fig.set_size_inches(25, 15)
+        
+        plt.legend(loc=4)
+        plt.title('TSP')
+        plt.show()
 
 
 class SA_TSP(some_TSP):
@@ -659,70 +718,6 @@ class SA_TSP(some_TSP):
         用于交互最优值
         '''
         return self.best_operator, round(self.best_fitness, 3)
-
-    def visualization_latlun(self):
-        # 可视化函数
-        self.data_process() # 加载要用的数据
-        '''
-        该Python文件的作用是可视化TSP问题的解
-        
-        中途遇到点小问题, 已将问题发在我的博客上:
-            https://segmentfault.com/a/1190000019476955
-        
-        同时,代码报了几个warning,在Matplotlib3.3之后将不能在用,所以请注意版本问题
-        '''
-        
-        import os
-        import conda
-        import numpy as np
-        
-        conda_file_dir = conda.__file__
-        conda_dir = conda_file_dir.split('lib')[0]
-        proj_lib = os.path.join(os.path.join(conda_dir, 'share'), 'proj')
-        os.environ["PROJ_LIB"] = proj_lib
-        # 以上4句代码用于添加环境变量
-        # windows 的话应该不用这么麻烦
-        # 我的环境是Ubuntu18.04 从他github上翻出来的
-        # 应该是要大改环境变量 我不想纠结了
-        
-        
-        from mpl_toolkits.basemap import Basemap
-        import matplotlib.pyplot as plt
-        
-        best_order = np.load(self.save_best_dir, allow_pickle=True)[1]
-        data_array = self.lun_lat_array[best_order]     # 按照给定的顺序重排
-        data_array = data_array[:, ::-1]                # 其经纬度反了
-        # 建立一个basemap对象
-        m = Basemap(projection='mill',
-                    llcrnrlat = 30,     # 左下角的纬度
-                    llcrnrlon = -70,    # 左下角的经度
-                    urcrnrlat = 80,     # 右上角的维度
-                    urcrnrlon = 35,     # 右上角的经度
-                    resolution='l'      # 分辨率低, 为了加快生成速度
-                    )
-        # 以下是换算经纬度 得到 lun_lat_array(注意和 self.lun_lat_array 区分)
-        lun_lat_list = []
-        for lun_lat in data_array:
-            lun_lat_list.append(
-                    m(*lun_lat)
-                    )
-        lun_lat_array = np.array(lun_lat_list)
-        
-        m.drawcoastlines()                            # 画国家分割线
-        m.drawcountries(linewidth=1)                  # 设置国家分割线　线宽为２
-                  
-        
-        m.plot(lun_lat_array[:, 0], lun_lat_array[:, 1], 'b*', markersize=5)   # 画点
-        # 此处标记看参考 https://matplotlib.org/api/markers_api.html
-        
-        m.plot(lun_lat_array[:, 0], lun_lat_array[:, 1], color='r', linewidth=1, label='TSP_SA')
-        
-        fig = plt.gcf()                    # 得到当前的figure     
-        # fig.set_size_inches(25, 15)
-        
-        plt.legend(loc=4)
-        plt.title('TSP')
-        plt.show()
 
 
 class GA_TSP(some_TSP):
@@ -848,69 +843,7 @@ class GA_TSP(some_TSP):
         # 用于和用户交互最优解(应该放在基类中)
         return self.best_individual[0]
     
-    def visualization_latlun(self):
-        # 可视化函数
-        self.data_process() # 加载要用的数据
-        '''
-        该Python文件的作用是可视化TSP问题的解
-        
-        中途遇到点小问题, 已将问题发在我的博客上:
-            https://segmentfault.com/a/1190000019476955
-        
-        同时,代码报了几个warning,在Matplotlib3.3之后将不能在用,所以请注意版本问题
-        '''
-        
-        import os
-        import conda
-        import numpy as np
-        
-        conda_file_dir = conda.__file__
-        conda_dir = conda_file_dir.split('lib')[0]
-        proj_lib = os.path.join(os.path.join(conda_dir, 'share'), 'proj')
-        os.environ["PROJ_LIB"] = proj_lib
-        # 以上4句代码用于添加环境变量
-        # windows 的话应该不用这么麻烦
-        # 我的环境是Ubuntu18.04 从他github上翻出来的
-        # 应该是要大改环境变量 我不想纠结了
-        
-        
-        from mpl_toolkits.basemap import Basemap
-        import matplotlib.pyplot as plt
-        
-        best_order = np.load(self.save_best_dir, allow_pickle=True)[1]
-        data_array = self.lun_lat_array[best_order]     # 按照给定的顺序重排
-        data_array = data_array[:, ::-1]                # 其经纬度反了
-        # 建立一个basemap对象
-        m = Basemap(projection='mill',
-                    llcrnrlat = 30,     # 左下角的纬度
-                    llcrnrlon = -70,    # 左下角的经度
-                    urcrnrlat = 80,     # 右上角的维度
-                    urcrnrlon = 35,     # 右上角的经度
-                    resolution='l'      # 分辨率低, 为了加快生成速度
-                    )
-        # 以下是换算经纬度 得到 lun_lat_array(注意和 self.lun_lat_array 区分)
-        lun_lat_list = []
-        for lun_lat in data_array:
-            lun_lat_list.append(
-                    m(*lun_lat)
-                    )
-        lun_lat_array = np.array(lun_lat_list)
-        
-        m.drawcoastlines()                            # 画国家分割线
-        m.drawcountries(linewidth=1)                  # 设置国家分割线　线宽为２
-                  
-        
-        m.plot(lun_lat_array[:, 0], lun_lat_array[:, 1], 'b*', markersize=5)   # 画点
-        # 此处标记看参考 https://matplotlib.org/api/markers_api.html
-        
-        m.plot(lun_lat_array[:, 0], lun_lat_array[:, 1], color='r', linewidth=1, label='TSP_GA')
-        
-        fig = plt.gcf()                    # 得到当前的figure     
-        # fig.set_size_inches(25, 15)
-        
-        plt.legend(loc=4)
-        plt.title('TSP')
-        plt.show()
+
     
     
 class PSO_TSP(some_TSP):
@@ -933,70 +866,7 @@ class PSO_TSP(some_TSP):
         candidate_special_fitness = specials_fitness[fitness_order]
 
         return candidate_special[-1], candidate_special_fitness[-1]
-    
-    def visualization_latlun(self):
-        # 可视化函数
-        self.data_process() # 加载要用的数据
-        '''
-        该Python文件的作用是可视化TSP问题的解
-        
-        中途遇到点小问题, 已将问题发在我的博客上:
-            https://segmentfault.com/a/1190000019476955
-        
-        同时,代码报了几个warning,在Matplotlib3.3之后将不能在用,所以请注意版本问题
-        '''
-        
-        import os
-        import conda
-        import numpy as np
-        
-        conda_file_dir = conda.__file__
-        conda_dir = conda_file_dir.split('lib')[0]
-        proj_lib = os.path.join(os.path.join(conda_dir, 'share'), 'proj')
-        os.environ["PROJ_LIB"] = proj_lib
-        # 以上4句代码用于添加环境变量
-        # windows 的话应该不用这么麻烦
-        # 我的环境是Ubuntu18.04 从他github上翻出来的
-        # 应该是要大改环境变量 我不想纠结了
-        
-        
-        from mpl_toolkits.basemap import Basemap
-        import matplotlib.pyplot as plt
-        
-        best_order = np.load(self.save_best_dir, allow_pickle=True)[1]
-        data_array = self.lun_lat_array[best_order]     # 按照给定的顺序重排
-        data_array = data_array[:, ::-1]                # 其经纬度反了
-        # 建立一个basemap对象
-        m = Basemap(projection='mill',
-                    llcrnrlat = 30,     # 左下角的纬度
-                    llcrnrlon = -70,    # 左下角的经度
-                    urcrnrlat = 80,     # 右上角的维度
-                    urcrnrlon = 35,     # 右上角的经度
-                    resolution='l'      # 分辨率低, 为了加快生成速度
-                    )
-        # 以下是换算经纬度 得到 lun_lat_array(注意和 self.lun_lat_array 区分)
-        lun_lat_list = []
-        for lun_lat in data_array:
-            lun_lat_list.append(
-                    m(*lun_lat)
-                    )
-        lun_lat_array = np.array(lun_lat_list)
-        
-        m.drawcoastlines()                            # 画国家分割线
-        m.drawcountries(linewidth=1)                  # 设置国家分割线　线宽为２
-                  
-        
-        m.plot(lun_lat_array[:, 0], lun_lat_array[:, 1], 'b*', markersize=5)   # 画点
-        # 此处标记看参考 https://matplotlib.org/api/markers_api.html
-        
-        m.plot(lun_lat_array[:, 0], lun_lat_array[:, 1], color='r', linewidth=1, label='TSP_PSO')
-        
-        fig = plt.gcf()                    # 得到当前的figure     
-        # fig.set_size_inches(25, 15)
-        
-        plt.legend(loc=4)
-        plt.title('TSP')
-        plt.show()
+
     
     def main(self):
         special = self.generate_group()
@@ -1046,5 +916,10 @@ class PSO_TSP(some_TSP):
             
         self.data_save(special_gbest[0], -special_gbest[1], "PSO")
         
-
+class CSO_TSP(some_TSP):
     
+    def __init__(self, data_name=None, max_iter=500, special_quality=1, individual_quality_of_special=100, w=0.2, c1=None, c2=None):
+        super().__init__(data_name, max_iter, special_quality, individual_quality_of_special)
+        self.w = w
+        self.c1 = np.random.uniform() if c1==None else c1
+        self.c2 = np.random.uniform() if c2==None else c2
